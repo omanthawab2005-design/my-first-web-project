@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ARES OS - GOD MODE</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono&display=swap');
+        body, html { margin: 0; padding: 0; height: 100%; background: #000; color: #00f2ff; font-family: 'Orbitron', sans-serif; overflow: hidden; }
+        .container { display: grid; grid-template-columns: 280px 1fr 280px; grid-template-rows: 50px 1fr 180px; gap: 10px; padding: 10px; height: 100vh; box-sizing: border-box; }
+        .panel { border: 1px solid rgba(0, 242, 255, 0.4); background: rgba(0, 10, 20, 0.9); box-shadow: 0 0 15px rgba(0, 242, 255, 0.1); padding: 15px; position: relative; }
+        header { grid-column: 1 / 4; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00f2ff; padding: 0 20px; }
+        main { grid-column: 2 / 3; position: relative; border: 1px solid #ff00ea; }
+        canvas { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+        #matrixCanvas { z-index: 1; pointer-events: none; }
+        #gameCanvas { z-index: 2; }
+        footer { grid-column: 1 / 4; font-family: 'JetBrains Mono', monospace; color: #00ff41; overflow-y: auto; display: flex; flex-direction: column; }
+        #history { flex-grow: 1; overflow-y: auto; padding-bottom: 5px; }
+        .input-line { display: flex; background: rgba(0,255,65,0.1); padding: 5px; }
+        #cmdInput { background: transparent; border: none; color: #00ff41; outline: none; width: 100%; font-family: inherit; }
+        .visualizer-container { display: flex; align-items: flex-end; justify-content: center; height: 50px; gap: 2px; margin-top: 10px; }
+        .bar { width: 8px; background: #00f2ff; box-shadow: 0 0 10px #00f2ff; height: 5px; transition: height 0.05s ease; }
+        .btn-action { background: #ff00ea; color: #fff; border: none; padding: 10px; cursor: pointer; font-family: 'Orbitron'; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header class="panel">
+        <div>ARES_OS // MODE: SUPREME</div>
+        <div id="clock">00:00:00</div>
+        <div id="status">ENCRYPTION: ACTIVE</div>
+    </header>
+
+    <aside class="panel">
+        <h4 style="margin:0">AUDIO ANALYZER</h4>
+        <div class="visualizer-container" id="visualizer">
+            </div>
+        <button class="btn-action" onclick="initAudio()">START AUDIO SENSORS</button>
+        <hr style="border:0.5px solid rgba(0,242,255,0.2); margin:20px 0">
+        <h4 style="margin:0">SYSTEM LOAD</h4>
+        CPU <div style="background:#001a1a; height:10px;"><div id="cpu" style="width:40%; background:#00f2ff; height:100%"></div></div>
+    </aside>
+
+    <main class="panel">
+        <canvas id="matrixCanvas"></canvas>
+        <canvas id="gameCanvas"></canvas>
+    </main>
+
+    <aside class="panel">
+        <h4 style="margin:0">QUICK CMDS</h4>
+        <p style="font-size:0.7em">> type 'matrix' to toggle effect</p>
+        <p style="font-size:0.7em">> type 'hack' for override</p>
+        <p style="font-size:0.7em">> type 'start' for combat</p>
+    </aside>
+
+    <footer class="panel">
+        <div id="history">Welcome to ARES OS... Type 'help' to begin.</div>
+        <div class="input-line">
+            <span>USER@ARES:~$&nbsp;</span>
+            <input type="text" id="cmdInput" autofocus>
+        </div>
+    </footer>
+</div>
+
+<script>
+    // --- Clock ---
+    setInterval(() => document.getElementById("clock").innerText = new Date().toLocaleTimeString(), 1000);
+
+    // --- Matrix Effect ---
+    const mCanvas = document.getElementById("matrixCanvas");
+    const mCtx = mCanvas.getContext("2d");
+    let matrixActive = false;
+    let drops = [];
+    const fontSize = 16;
+
+    function initMatrix() {
+        mCanvas.width = mCanvas.offsetWidth;
+        mCanvas.height = mCanvas.offsetHeight;
+        const cols = mCanvas.width / fontSize;
+        drops = Array(Math.floor(cols)).fill(1);
+    }
+
+    function drawMatrix() {
+        if(!matrixActive) { mCtx.clearRect(0,0,mCanvas.width,mCanvas.height); return; }
+        mCtx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+        mCtx.fillStyle = "#0f0";
+        mCtx.font = fontSize + "px monospace";
+        for(let i = 0; i < drops.length; i++) {
+            const text = String.fromCharCode(0x30A0 + Math.random() * 96);
+            mCtx.fillText(text, i * fontSize, drops[i] * fontSize);
+            if(drops[i] * fontSize > mCanvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+    }
+    window.addEventListener('resize', initMatrix);
+    initMatrix();
+
+    // --- Audio Visualizer ---
+    function initAudio() {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            const audioCtx = new AudioContext();
+            const source = audioCtx.createMediaStreamSource(stream);
+            const analyzer = audioCtx.createAnalyser();
+            analyzer.fftSize = 64;
+            source.connect(analyzer);
+            const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+            
+            const viz = document.getElementById("visualizer");
+            viz.innerHTML = "";
+            for(let i=0; i<analyzer.frequencyBinCount; i++) {
+                const bar = document.createElement("div");
+                bar.className = "bar";
+                viz.appendChild(bar);
+            }
+            const bars = document.getElementsByClassName("bar");
+
+            function animateAudio() {
+                analyzer.getByteFrequencyData(dataArray);
+                for(let i=0; i<bars.length; i++) {
+                    const height = (dataArray[i] / 255) * 50;
+                    bars[i].style.height = height + 5 + "px";
+                }
+                requestAnimationFrame(animateAudio);
+            }
+            animateAudio();
+            document.getElementById("history").innerHTML += "<div>[SYSTEM] AUDIO SENSORS ONLINE.</div>";
+        }).catch(err => alert("Microphone access denied!"));
+    }
+
+    // --- Terminal ---
+    const cmdInput = document.getElementById("cmdInput");
+    const history = document.getElementById("history");
+
+    cmdInput.addEventListener("keydown", (e) => {
+        if(e.key === "Enter") {
+            const cmd = cmdInput.value.toLowerCase();
+            const line = document.createElement("div");
+            line.innerHTML = `<span style="color:#fff">> ${cmd}</span>`;
+            history.appendChild(line);
+
+            if(cmd === "matrix") { 
+                matrixActive = !matrixActive; 
+                line.innerHTML += " -> MATRIX MODE TOGGLED";
+            } else if(cmd === "start") {
+                gameRunning = true;
+                line.innerHTML += " -> COMBAT INITIALIZED";
+            } else if(cmd === "hack") {
+                line.innerHTML += " <br><span style='color:red'>BYPASSING SECURITY... GRANTED.</span>";
+            } else if(cmd === "help") {
+                line.innerHTML += " <br>Available: matrix, start, hack, cls";
+            } else if(cmd === "cls") {
+                history.innerHTML = "";
+            }
+            cmdInput.value = "";
+            history.parentElement.scrollTop = history.parentElement.scrollHeight;
+        }
+    });
+
+    // --- Game Logic (Simple) ---
+    const gCanvas = document.getElementById("gameCanvas");
+    const gCtx = gCanvas.getContext("2d");
+    let gameRunning = false;
+    let pY = 150;
+
+    function gameLoop() {
+        gCanvas.width = gCanvas.offsetWidth;
+        gCanvas.height = gCanvas.offsetHeight;
+        gCtx.clearRect(0,0,gCanvas.width,gCanvas.height);
+        
+        if(gameRunning) {
+            gCtx.fillStyle = "#00f2ff";
+            gCtx.fillRect(50, pY, 30, 30);
+            gCtx.shadowBlur = 10; gCtx.shadowColor = "#00f2ff";
+            // Simple enemy
+            gCtx.fillStyle = "#ff00ea";
+            gCtx.fillRect(gCanvas.width - 100, 100, 50, 150);
+        } else {
+            gCtx.fillStyle = "rgba(0,242,255,0.2)";
+            gCtx.font = "15px Orbitron";
+            gCtx.fillText("TERMINAL: TYPE 'START'", gCanvas.width/2 - 80, gCanvas.height/2);
+        }
+        drawMatrix();
+        requestAnimationFrame(gameLoop);
+    }
+    gameLoop();
+</script>
+</body>
+</html>
